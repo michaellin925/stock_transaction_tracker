@@ -15,6 +15,8 @@ stockSheet = excelFile['transaction']	# load sheet
 
 inputCmd = ''
 
+
+# Main
 while inputCmd != 'exit':
 	inputCmd = input("Please enter the ticker symbol or enter 'exit' to close the program: ")
 
@@ -34,7 +36,7 @@ while inputCmd != 'exit':
 		checkSymbol = stockSheet.cell(column=3, row=rowCount).value
 		if checkSymbol == None:
 			if checkStockIndicator == 0:
-				print("Unable to find '"+inputCmd+"'. Please enter in uppercase.\n")
+				print("Unable to find '"+inputCmd+"'. Please make sure entering in uppercase.\n")
 				break
 			else:
 				break
@@ -62,12 +64,54 @@ while inputCmd != 'exit':
 				priceList.append(price)
 				total = share * price
 				totalList.append(total)
+				if stockSheet.cell(column=2, row=rowCount).value == 'buy':
+					GLList.append('*')
+
+				# Calculate Gain/Loss
+				if stockSheet.cell(column=2, row=rowCount).value == 'sell':
+					GLtotalShare = 0
+					GLtotalCost = 0
+					GLavgCost = 0
+					avgGL = 0
+					totalGL = 0
+					checkActionCount = 2
+					while True:
+						if stockSheet.cell(column=3, row=checkActionCount).value == None:
+							checkActionCount -= 1
+							break
+
+						if stockSheet.cell(column=3, row=checkActionCount).value == stockSym:
+							if stockSheet.cell(column=2, row=checkActionCount).value == 'buy':
+								stockBuyShare = int(stockSheet.cell(column=4, row=checkActionCount).value)
+								stockBuyPrice = float(stockSheet.cell(column=5, row=checkActionCount).value)
+								GLtotalCost += (stockBuyShare * stockBuyPrice)
+								GLtotalShare += stockBuyShare
+								GLavgCost = round((GLtotalCost / GLtotalShare), 2)
+							elif stockSheet.cell(column=2, row=checkActionCount).value == 'sell' and checkActionCount != rowCount:
+								stockSellShare = int(stockSheet.cell(column=4, row=checkActionCount).value)
+								GLtotalShare -= stockSellShare
+								GLtotalCost = GLtotalShare * GLavgCost
+							else:
+								stockSellShare = int(stockSheet.cell(column=4, row=checkActionCount).value)
+								stockSellPrice = float(stockSheet.cell(column=5, row=checkActionCount).value)
+								avgGL = round((stockSellPrice - GLavgCost), 2)
+								totalGL = round((avgGL * stockSellShare), 2)
+								GLList.append(totalGL)
+						checkActionCount += 1
+
+
+
+
 				actionCount += 1
 			rowCount += 1
 
-		stockTable = PrettyTable(['Date', 'Action', 'Share', 'Price', 'Total'])
+		stockTable = PrettyTable(['Date', 'Action', 'Share', 'Price', 'Total', 'Gain/Loss'])
+		stockTable.align['Share'] = 'r'
+		stockTable.align['Price'] = 'r'
+		stockTable.align['Total'] = 'r'
+		stockTable.align['Gain/Loss'] = 'r'
 		for r in range(0, actionCount):
-			stockTable.add_row([dateList[r], actionList[r], shareList[r], priceList[r], totalList[r]])
+			stockTable.add_row([dateList[r], actionList[r], shareList[r], priceList[r], totalList[r], GLList[r]])
 
 		print("\nStock:", stockSym)
 		print(stockTable, "\n\n")
